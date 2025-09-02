@@ -1,0 +1,66 @@
+version: "3.9"
+x-airflow-env: &airflow_env
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__CORE__EXECUTOR: "LocalExecutor"
+  AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+  AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "false"
+  AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Sao_Paulo"
+  _PIP_ADDITIONAL_REQUIREMENTS: ""
+
+services:
+  dw_db:
+    image: postgres:16
+    container_name: dw_db
+    environment:
+      POSTGRES_DB: dw
+      POSTGRES_USER: dw_user
+      POSTGRES_PASSWORD: dw_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - dw_data:/var/lib/postgresql/data
+    networks:
+      - banvic_net
+    
+    airflow:
+      image: apache/airflow:2.9.1
+      container_name: airflow
+      depends_on:
+        - dw_db
+        - source_db
+      environment:
+        <<: *airflow_env
+      command: bash -c "pip install -r /opt/airflow/requirements.txt && \
+                        airflow db init && \
+                        airflow users create --username airflow --password airflow --firstname Air --lastname Flow --role Admin --email admin@example.com || true && \
+                        airflow webserver & airflow scheduler"
+      ports:
+        - "8080:8080"
+      volumes:
+        - ./dags:/opt/airflow/dags
+        - ./requirements.txt:/opt/airflow/requirements.txt
+        - ./data:/opt/airflow/data
+        - ./datasets:/opt/airflow/datasets
+      networks:
+        - banvic_net
+    source_db:
+      image: postgres:16
+      container_name: source_db
+      environment:
+        POSTGRES_DB: banvic
+        POSTGRES_USER: data_engineer
+        POSTGRES_PASSWORD: v3rysecur&pas5w0rd
+      volumes:
+        - source_db_data:/var/lib/postgresql/data
+        - ./source/banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
+      ports:
+        - "55432:5432"
+      networks:
+        - banvic_net
+
+networks:
+  banvic_net:
+
+volumes:
+  dw_data:
+  source_db_data:
