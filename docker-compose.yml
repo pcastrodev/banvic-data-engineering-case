@@ -7,7 +7,7 @@ x-airflow-env: &airflow_env
   AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Sao_Paulo"
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@airflow_db:5432/airflow"
   AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
-  AIRFLOW__API__AUTH_BACKEND: "airflow.api.auth.backend.basic_auth"
+  AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
   AIRFLOW__PIP_ADDITIONAL_REQUIREMENTS: ""
 
 services:
@@ -129,3 +129,4 @@ networks:
 volumes:
   dw_data:
   source_db_data:
+  airflow_db_data:
