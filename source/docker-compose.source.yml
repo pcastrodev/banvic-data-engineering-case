@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: banvic
+      POSTGRES_USER: data_engineer
+      POSTGRES_PASSWORD: v3rysecur&pas5w0rd
+    volumes:
+      - ./dbdata:/var/lib/postgresql/data
+      - ./banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
+    ports:
+      - 55432:5432
