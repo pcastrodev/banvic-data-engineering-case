@@ -5,58 +5,123 @@ x-airflow-env: &airflow_env
   AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
   AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "false"
   AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Sao_Paulo"
-  _PIP_ADDITIONAL_REQUIREMENTS: ""
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@airflow_db:5432/airflow"
+  AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
+  AIRFLOW__API__AUTH_BACKEND: "airflow.api.auth.backend.basic_auth"
+  AIRFLOW__PIP_ADDITIONAL_REQUIREMENTS: ""
 
 services:
   dw_db:
     image: postgres:16
     container_name: dw_db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: dw
       POSTGRES_USER: dw_user
-      POSTGRES_PASSWORD: dw_password
+      POSTGRES_PASSWORD: ${DW_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${DW_PORT}:5432"
     volumes:
       - dw_data:/var/lib/postgresql/data
     networks:
       - banvic_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dw_user -d dw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     
-    airflow:
-      image: apache/airflow:2.9.1
-      container_name: airflow
-      depends_on:
-        - dw_db
-        - source_db
-      environment:
-        <<: *airflow_env
-      command: bash -c "pip install -r /opt/airflow/requirements.txt && \
-                        airflow db init && \
-                        airflow users create --username airflow --password airflow --firstname Air --lastname Flow --role Admin --email admin@example.com || true && \
-                        airflow webserver & airflow scheduler"
-      ports:
-        - "8080:8080"
-      volumes:
-        - ./dags:/opt/airflow/dags
-        - ./requirements.txt:/opt/airflow/requirements.txt
-        - ./data:/opt/airflow/data
-        - ./datasets:/opt/airflow/datasets
-      networks:
-        - banvic_net
-    source_db:
-      image: postgres:16
-      container_name: source_db
-      environment:
-        POSTGRES_DB: banvic
-        POSTGRES_USER: data_engineer
-        POSTGRES_PASSWORD: v3rysecur&pas5w0rd
-      volumes:
-        - source_db_data:/var/lib/postgresql/data
-        - ./source/banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
-      ports:
-        - "55432:5432"
-      networks:
-        - banvic_net
+  source_db:
+    image: postgres:16
+    container_name: source_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: banvic
+      POSTGRES_USER: data_engineer
+      POSTGRES_PASSWORD: "${SOURCE_PASSWORD}"
+    volumes:
+      - source_db_data:/var/lib/postgresql/data
+      - ./source/banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
+    ports:
+      - "${SOURCE_PORT}:5432"
+    networks:
+      - banvic_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U data_engineer -d banvic"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  airflow_db:
+    image: postgres:16
+    container_name: airflow_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+    ports:
+      - "${AIRFLOW_DB_PORT}:5432"
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+    networks:
+      - banvic_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  airflow:
+    image: apache/airflow:2.9.1
+    container_name: airflow
+    depends_on:
+      airflow_db:
+        condition: service_healthy
+      dw_db:
+        condition: service_healthy
+      source_db:
+        condition: service_healthy
+    environment:
+      <<: *airflow_env
+      AIRFLOW_UID: "50000"
+      AIRFLOW_GID: "0"
+
+      SOURCE_DB_HOST: source_db
+      SOURCE_DB_PORT: "${SOURCE_PORT}"
+      SOURCE_DB_USER: "data_engineer"
+      SOURCE_DB_PASSWORD: "${SOURCE_PASSWORD}"
+      SOURCE_DB_NAME: "banvic"
+
+      DW_DB_HOST: dw_db
+      DW_DB_PORT: "5432"
+      DW_DB_USER: "dw_user"
+      DW_DB_PASSWORD: "${DW_PASSWORD}"
+      DW_DB_NAME: "dw"
+    command: >
+      bash -c "
+      pip install -r /opt/airflow/requirements.txt &&
+      airflow db upgrade &&
+      airflow users create
+        --username ${AIRFLOW_USER}
+        --password ${AIRFLOW_PASS}
+        --firstname Air
+        --lastname Flow
+        --role Admin
+        --email ${AIRFLOW_EMAIL} || true &&
+      airflow webserver & airflow scheduler 
+      "
+    ports:
+      - "${AIRFLOW_PORT}:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./requirements.txt:/opt/airflow/requirements.txt
+      - ./data:/opt/airflow/data
+      - ./datasets:/opt/airflow/datasets
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    networks:
+      - banvic_net
 
 networks:
   banvic_net:
