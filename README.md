@@ -19,6 +19,7 @@ O objetivo foi construir um processo de **extração, transformação e carga (E
 ### 1. Clonar o repositório
 
 git clone https://github.com/pcastrodev/banvic-data-engineering-case.git
+
 cd banvic-data-engineering-case
 
 ---
