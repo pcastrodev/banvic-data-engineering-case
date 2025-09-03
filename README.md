@@ -23,12 +23,12 @@ cd banvic-data-engineering-case
 
 ---
 
-2. Subir os containers
+### 2. Subir os containers
 docker compose up -d --build
 
 ---
 
-3. Acessar o Airflow
+### 3. Acessar o Airflow
 
 URL: http://localhost:8080
 Usuário: airflow
@@ -36,11 +36,11 @@ Senha: airflow
 
 ---
 
-4. Executar o DAG
+### 4. Executar o DAG
 
 No Airflow, ative o DAG banvic_pipeline_dag e rode manualmente ou aguarde a execução agendada (todos os dias às 04h35).
 
-🚀 Fluxo do pipeline
+## 🚀 Fluxo do pipeline
 
 extract_from_source_db → Extrai tabelas do Postgres de origem e salva em CSV
 extract_from_csv_dataset → Copia o dataset transacoes.csv para a partição do dia
@@ -48,7 +48,7 @@ load_to_dw → Carrega todos os CSVs no Data Warehouse (staging + tabelas finais
 
 ---
 
-📊 Estrutura no Data Warehouse
+## 📊 Estrutura no Data Warehouse
 
 Após rodar o pipeline, o DW recebe as tabelas:
 
@@ -72,6 +72,6 @@ SELECT COUNT(*) FROM public.csv_transacoes;
 
 ---
 
-👨‍💻 Autor
+## 👨‍💻 Autor
 Desenvolvido por Pedro Castro (@pcastrodev
 ) como parte do case de Data Engineering da BanVic.
