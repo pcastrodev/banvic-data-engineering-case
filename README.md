@@ -64,13 +64,13 @@ public.csv_transacoes
 
 Exemplos de consultas:
 
-# Total de clientes
+### Total de clientes
 SELECT COUNT(*) FROM public.source_clientes;
 
-# Total de contas
+### Total de contas
 SELECT COUNT(*) FROM public.source_contas;
 
-# Total de transações
+### Total de transações
 SELECT COUNT(*) FROM public.csv_transacoes;
 
 ---
