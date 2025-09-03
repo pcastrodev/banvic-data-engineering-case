@@ -1,14 +1,13 @@
-version: "3.9"
 x-airflow-env: &airflow_env
   AIRFLOW__CORE__LOAD_EXAMPLES: "false"
   AIRFLOW__CORE__EXECUTOR: "LocalExecutor"
   AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
   AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "false"
   AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Sao_Paulo"
-  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@airflow_db:5432/airflow"
-  AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@airflow_db:5432/airflow"
+  AIRFLOW__CORE__FERNET_KEY: "Y1nJb3mWc7e3x1bqVm3y3YF4n1sR1y1i2lV4H0V0B5E="  # chave de exemplo p/ o case
   AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
-  AIRFLOW__PIP_ADDITIONAL_REQUIREMENTS: ""
+  _PIP_ADDITIONAL_REQUIREMENTS: ""
 
 services:
   dw_db:
@@ -18,9 +17,9 @@ services:
     environment:
       POSTGRES_DB: dw
       POSTGRES_USER: dw_user
-      POSTGRES_PASSWORD: ${DW_PASSWORD}
+      POSTGRES_PASSWORD: dw_password
     ports:
-      - "${DW_PORT}:5432"
+      - "5433:5432"
     volumes:
       - dw_data:/var/lib/postgresql/data
     networks:
@@ -30,7 +29,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-    
+
   source_db:
     image: postgres:16
     container_name: source_db
@@ -38,12 +37,12 @@ services:
     environment:
       POSTGRES_DB: banvic
       POSTGRES_USER: data_engineer
-      POSTGRES_PASSWORD: "${SOURCE_PASSWORD}"
+      POSTGRES_PASSWORD: "v3rysecur&pas5w0rd"   # aspas por causa do &
     volumes:
       - source_db_data:/var/lib/postgresql/data
       - ./source/banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
     ports:
-      - "${SOURCE_PORT}:5432"
+      - "55432:5432"
     networks:
       - banvic_net
     healthcheck:
@@ -59,9 +58,9 @@ services:
     environment:
       POSTGRES_DB: airflow
       POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+      POSTGRES_PASSWORD: airflow
     ports:
-      - "${AIRFLOW_DB_PORT}:5432"
+      - "5434:5432"
     volumes:
       - airflow_db_data:/var/lib/postgresql/data
     networks:
@@ -75,6 +74,7 @@ services:
   airflow:
     image: apache/airflow:2.9.1
     container_name: airflow
+    restart: unless-stopped
     depends_on:
       airflow_db:
         condition: service_healthy
@@ -88,20 +88,25 @@ services:
       AIRFLOW_GID: "0"
 
       SOURCE_DB_HOST: source_db
-      SOURCE_DB_PORT: "${SOURCE_PORT}"
+      SOURCE_DB_PORT: "5432"
       SOURCE_DB_USER: "data_engineer"
-      SOURCE_DB_PASSWORD: "${SOURCE_PASSWORD}"
+      SOURCE_DB_PASSWORD: "v3rysecur&pas5w0rd"
       SOURCE_DB_NAME: "banvic"
 
       DW_DB_HOST: dw_db
       DW_DB_PORT: "5432"
       DW_DB_USER: "dw_user"
-      DW_DB_PASSWORD: "${DW_PASSWORD}"
+      DW_DB_PASSWORD: "dw_password"
       DW_DB_NAME: "dw"
+
+      AIRFLOW_USER: "airflow"
+      AIRFLOW_PASS: "airflow"
+      AIRFLOW_EMAIL: "admin@example.com"
+
     command: >
       bash -c "
       pip install -r /opt/airflow/requirements.txt &&
-      airflow db upgrade &&
+      airflow db init &&
       airflow users create
         --username ${AIRFLOW_USER}
         --password ${AIRFLOW_PASS}
@@ -109,10 +114,10 @@ services:
         --lastname Flow
         --role Admin
         --email ${AIRFLOW_EMAIL} || true &&
-      airflow webserver & airflow scheduler 
+      airflow webserver & airflow scheduler
       "
     ports:
-      - "${AIRFLOW_PORT}:8080"
+      - "8080:8080"
     volumes:
       - ./dags:/opt/airflow/dags
       - ./requirements.txt:/opt/airflow/requirements.txt
