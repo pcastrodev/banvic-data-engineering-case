@@ -40,6 +40,8 @@ Senha: airflow
 
 No Airflow, ative o DAG banvic_pipeline_dag e rode manualmente ou aguarde a execução agendada (todos os dias às 04h35).
 
+---
+
 ## 🚀 Fluxo do pipeline
 
 extract_from_source_db → Extrai tabelas do Postgres de origem e salva em CSV
@@ -61,13 +63,14 @@ public.source_propostas_credito
 public.csv_transacoes
 
 Exemplos de consultas:
--- Total de clientes
+
+# Total de clientes
 SELECT COUNT(*) FROM public.source_clientes;
 
--- Total de contas
+# Total de contas
 SELECT COUNT(*) FROM public.source_contas;
 
--- Total de transações
+# Total de transações
 SELECT COUNT(*) FROM public.csv_transacoes;
 
 ---
