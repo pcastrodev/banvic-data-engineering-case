@@ -5,7 +5,7 @@ x-airflow-env: &airflow_env
   AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "false"
   AIRFLOW__CORE__DEFAULT_TIMEZONE: "America/Sao_Paulo"
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@airflow_db:5432/airflow"
-  AIRFLOW__CORE__FERNET_KEY: "Y1nJb3mWc7e3x1bqVm3y3YF4n1sR1y1i2lV4H0V0B5E="  # chave de exemplo p/ o case
+  AIRFLOW__CORE__FERNET_KEY: "Y1nJb3mWc7e3x1bqVm3y3YF4n1sR1y1i2lV4H0V0B5E="  
   AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
   _PIP_ADDITIONAL_REQUIREMENTS: ""
 
@@ -37,7 +37,7 @@ services:
     environment:
       POSTGRES_DB: banvic
       POSTGRES_USER: data_engineer
-      POSTGRES_PASSWORD: "v3rysecur&pas5w0rd"   # aspas por causa do &
+      POSTGRES_PASSWORD: "v3rysecur&pas5w0rd"  
     volumes:
       - source_db_data:/var/lib/postgresql/data
       - ./source/banvic.sql:/docker-entrypoint-initdb.d/banvic.sql
@@ -105,15 +105,10 @@ services:
 
     command: >
       bash -c "
+      sleep 10 &&
       pip install -r /opt/airflow/requirements.txt &&
       airflow db init &&
-      airflow users create
-        --username ${AIRFLOW_USER}
-        --password ${AIRFLOW_PASS}
-        --firstname Air
-        --lastname Flow
-        --role Admin
-        --email ${AIRFLOW_EMAIL} || true &&
+      airflow users create --username airflow --password airflow --firstname Air --lastname Flow --role Admin --email admin@example.com &&
       airflow webserver & airflow scheduler
       "
     ports:
