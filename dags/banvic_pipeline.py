@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 log.info("[BANVIC DAG LOADED v7] PID=%s", os.getpid())
 print("[BANVIC DAG LOADED v7]")
 
-# ------------------------- helpers -------------------------
+# ------------------------- Funções Auxiliadoras -------------------------
 
 def _run_date_folder() -> str:
     ctx = get_current_context()
@@ -63,7 +63,20 @@ def _copy_df_to_postgres(df: pd.DataFrame, engine: sa.Engine, fq_table: str) -> 
             )
         raw_conn.commit()
 
-# --------------------- task callables ----------------------
+def create_staging_schema():
+    dw_engine = _get_engine(
+        user=os.getenv("DW_DB_USER", "dw_user"),
+        password=os.getenv("DW_DB_PASSWORD", "dw_password"),
+        host=os.getenv("DW_DB_HOST", "dw_db"),
+        port=int(os.getenv("DW_DB_PORT", "5432")),
+        db=os.getenv("DW_DB_NAME", "dw"),
+    )
+    
+    with dw_engine.begin() as conn:
+        conn.exec_driver_sql("CREATE SCHEMA IF NOT EXISTS staging;")
+        log.info("[SCHEMA] Schema staging verificado/criado com sucesso")
+
+# --------------------- Funções das tasks ----------------------
 
 def extract_from_source_db() -> None:
     exec_date = _run_date_folder()
@@ -188,7 +201,7 @@ def load_to_dw() -> None:
             )
             log.info("[LOAD] Final %s atualizada.", tabela_final)
 
-# ----------------------- DAG definition --------------------
+# ----------------------- Definição da DAG --------------------
 
 default_args = {
     "owner": "banvic",
@@ -209,6 +222,11 @@ with DAG(
 ) as dag:
     start = EmptyOperator(task_id="start")
 
+    create_schema = PythonOperator(
+        task_id="create_staging_schema",
+        python_callable=create_staging_schema,
+    )
+
     extract_db = PythonOperator(
         task_id="extract_from_source_db",
         python_callable=extract_from_source_db,
@@ -226,4 +244,4 @@ with DAG(
 
     end = EmptyOperator(task_id="end")
 
-    start >> [extract_db, extract_csv] >> load >> end
+    start >> create_schema >> [extract_db, extract_csv] >> load >> end
